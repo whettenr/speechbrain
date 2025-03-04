@@ -104,7 +104,7 @@ echo 'done unpacking MPF!'
 ### Portmedia ###
 echo 'moving Portmedia'
 scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/Portmedia $SCRATCH/LeBenchmark
-echo 'unpacking MPF...'
+echo 'unpacking Portmedia...'
 tar -xf $SCRATCH/LeBenchmark/Portmedia/PMDOM2FR_wavs.tar
 echo 'done unpacking Portmedia!'
 
