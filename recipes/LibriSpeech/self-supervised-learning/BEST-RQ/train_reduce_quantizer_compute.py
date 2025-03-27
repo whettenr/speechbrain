@@ -128,9 +128,6 @@ class BestRQBrain(sb.core.Brain):
 
     def on_stage_start(self, stage, epoch):
         """Gets called at the beginning of each epoch"""
-        if stage == sb.Stage.TRAIN:
-            self.predictions = []
-            self.targets = []
         if stage != sb.Stage.TRAIN:
             self.acc_metric = []
 

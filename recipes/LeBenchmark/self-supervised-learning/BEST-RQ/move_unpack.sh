@@ -2,163 +2,133 @@
 
 #SBATCH --job-name=prep_lebench   # nom du job
 #SBATCH --account=dha@cpu
-#SBATCH --partition=cpu_p1
-#SBATCH --cpus-per-task=32
-#SBATCH --time=10:00:00          # temps d'exécution maximum demande (HH:MM:SS) 
-#SBATCH --output=log/prep_ll_md_%j.log  # log file
+#SBATCH --partition=prepost
+#SBATCH --time=2:00:00
+#SBATCH --output=log/prep_med_%j.log
 
 
-########## small 1k ##########
+# List of directories and corresponding file names
+DIRECTORIES=(
+    # # sm
+    # "/lustre/fsmisc/dataset/MultilingualLibriSpeech/mls_french.tar.gz"
+    # # md-clean
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/automatic_transc/EPAC_flowbert/output_waves.tar"
+    # # md
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/African_Accented_French/wavs.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/Att-HACK_SLR88/wavs.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/CaFE/wavs.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/CFPP_corrected/output.tar"
+    # "/lustre/fsstor/projects/rech/nkp/uaj64gk/LeBenchmark/ESLO2/eslo2_train1_flowbert.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/GEMEP/wavs.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/MPF/output_waves.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/Portmedia/PMDOM2FR_wavs.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/TCOF_corrected/output.tar"
+    # # lg
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v2/SpeechData/raw_datasets/Mass/output_waves.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v2/SpeechData/raw_datasets/NCCFr/output_waves.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/Voxpopuli_unlabeled_fr/wav.tar"
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/otherTransc/Voxpopuli_transcribed/wav.tar"
+    # # xlg
+    # "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/Niger-mali-audio-collection/output_wav.tar"
+    "/lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/audiocite_with_metadata/wavs.tar"
+)
 
-echo 'moving mls_french'
-if [ -f "$SCRATCH/LeBenchmark/mls_french.tar.gz" ]; then
-    echo "Already moved. Skipping move."
-else
-    scp -r -3  /lustre/fsmisc/dataset/MultilingualLibriSpeech/mls_french.tar.gz $SCRATCH/LeBenchmark
-fi
 
-if [ -d "$SCRATCH/LeBenchmark/EPAC_flowbert/output_waves" ]; then
-    echo "Files already unpacked. Skipping extraction."
-else
-    echo 'unpacking mls_french...'
-    tar -xzf $SCRATCH/LeBenchmark/mls_french.tar.gz
-    echo 'done unpacking mls_french!'
-fi
+SCRATCH_DIR="$SCRATCH/LeBenchmark"
+OUTPUT_DIR="$SCRATCH_DIR/all_outputs"
 
-########## medium-clean – 2.7k ##########
+# check if exists
+for DIR in "${DIRECTORIES[@]}"; do
+    if [ ! -e "$DIR" ]; then
+        echo "Error: File $DIR does not exist. Skipping."
+        continue
+    else 
+        echo "file $DIR exists!"
+    fi
+done
 
-echo 'moving EPAC'
-if [ -d "$SCRATCH/LeBenchmark/EPAC_flowbert" ]; then
-    echo "Already moved. Skipping move."
-else
-    scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/automatic_transc/EPAC_flowbert $SCRATCH/LeBenchmark
-fi
+mkdir -p "$OUTPUT_DIR"
 
-if [ -d "$SCRATCH/LeBenchmark/EPAC_flowbert/output_waves" ]; then
-    echo "Files already unpacked. Skipping extraction."
-else
-    echo "Unpacking EPAC..."
-    tar -xf $SCRATCH/LeBenchmark/EPAC_flowbert/output_waves.tar
-    echo "Done unpacking EPAC!"
-fi
+for DIR in "${DIRECTORIES[@]}"; do
+    # get second to last in file path
+    PARENT_DIR=$(basename $(dirname "$DIR")) 
+    # make directory using name
+    mkdir -p "$OUTPUT_DIR/$PARENT_DIR"
+    # location of dir where files will be unpacked
+    OUTPUT_PATH="$OUTPUT_DIR/$PARENT_DIR"
+    # name of new .tar file
+    FILE_PATH="$OUTPUT_PATH/$(basename "$DIR")"
 
-########## medium - 3k ##########
+    echo "Processing $DIR..."
 
-### African_Accented_French ###
-echo 'moving African_Accented_French'
-if [ -d "$SCRATCH/LeBenchmark/African_Accented_French" ]; then
-    echo "Files already unpacked. Skipping extraction."
-else
-    scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/African_Accented_French $SCRATCH/LeBenchmark
-    echo 'unpacking African_Accented_French...'
-    tar -xf $SCRATCH/LeBenchmark/African_Accented_French/wavs.tar
-    echo 'done unpacking African_Accented_French!'
-fi
+    if [ -e "$FILE_PATH" ]; then
+        echo "$DIR already moved to $FILE_PATH. Skipping move."
+    else
+        echo "Copying $DIR to $FILE_PATH ..."
+        scp -r -3 "$DIR" "$FILE_PATH"
+    fi
 
-### Att-HACK_SLR88 ###
-echo 'moving Att-HACK_SLR88'
-if [ -d "$SCRATCH/LeBenchmark/Att-HACK_SLR88" ]; then
-    echo "Files already unpacked. Skipping extraction."
-else
-    scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/Att-HACK_SLR88 $SCRATCH/LeBenchmark
-    echo 'unpacking Att-HACK_SLR88...'
-    tar -xf $SCRATCH/LeBenchmark/Att-HACK_SLR88/wavs.tar
-    echo 'done unpacking Att-HACK_SLR88!'
-fi
-
-### CaFE ###
-echo 'moving CaFE'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/CaFE $SCRATCH/LeBenchmark
-echo 'unpacking CaFE...'
-tar -xf $SCRATCH/LeBenchmark/CaFE/wavs.tar
-echo 'done unpacking CaFE!'
-
-### CFPP_corrected ###
-echo 'moving CFPP_corrected'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/CFPP_corrected $SCRATCH/LeBenchmark
-echo 'unpacking CFPP_corrected...'
-tar -xf $SCRATCH/LeBenchmark/CFPP_corrected/output.tar
-echo 'done unpacking CFPP_corrected!'
-
-### ESLO2 ###
-echo 'moving ESLO2'
-scp -r -3 /lustre/fsstor/projects/rech/nkp/uaj64gk/LeBenchmark/eslo2_train1_flowbert.tar.gz $SCRATCH/LeBenchmark
-echo 'unpacking ESLO2...'
-tar -xf $SCRATCH/LeBenchmark/eslo2_train1_flowbert.tar.gz
-echo 'done unpacking ESLO2!'
-
-### GEMEP ###
-echo 'moving GEMEP'
-rsync -av --exclude 'ESLO/' --exclude 'Scripts/' /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/GEMEP $SCRATCH/LeBenchmark
-echo 'unpacking GEMEP...'
-tar -xf $SCRATCH/LeBenchmark/GEMEP/wavs.tar
-echo 'done unpacking GEMEP!'
-
-### MPF ###
-echo 'moving MPF'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/MPF $SCRATCH/LeBenchmark
-echo 'unpacking MPF...'
-tar -xf $SCRATCH/LeBenchmark/MPF/output_waves.tar
-echo 'done unpacking MPF!'
-
-### Portmedia ###
-echo 'moving Portmedia'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/Portmedia $SCRATCH/LeBenchmark
-echo 'unpacking Portmedia...'
-tar -xf $SCRATCH/LeBenchmark/Portmedia/PMDOM2FR_wavs.tar
-echo 'done unpacking Portmedia!'
-
-### TCOF_corrected ###
-echo 'moving TCOF_corrected'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/aligned/manual_transc/TCOF_corrected $SCRATCH/LeBenchmark
-echo 'unpacking TCOF_corrected...'
-tar -xf $SCRATCH/LeBenchmark/Portmedia/output.tar.tar
-echo 'done unpacking TCOF_corrected!'
+    # Check file ending
+    if [[ "$FILE_PATH" == *.tar.gz ]]; then
+        # Check if the extracted directory already exists
+        if [ -d "$OUTPUT_PATH/$(basename "$FILE_PATH" .tar.gz)" ]; then
+            echo "$OUTPUT_PATH already unpacked. Skipping extraction."
+        else
+            echo "Unpacking $PARENT_DIR..."
+            tar -xf "$FILE_PATH" -C "$OUTPUT_PATH"
+        fi
+    elif [[ "$FILE_PATH" == *.tar ]]; then
+        # Check if the extracted directory already exists
+        if [ -d "$OUTPUT_PATH/$(basename "$FILE_PATH" .tar)" ]; then
+            echo "$OUTPUT_PATH already unpacked. Skipping extraction."
+        else
+            echo "Unpacking $PARENT_DIR..."
+            tar -xf "$FILE_PATH" -C "$OUTPUT_PATH"
+        fi
+    fi 
+    echo "Done processing $PARENT_DIR."
+done
 
 
 
-########## large - 7k ##########
-### MaSS ###
-echo 'moving MaSS'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v2/SpeechData/raw_datasets/Mass $SCRATCH/LeBenchmark
-echo 'unpacking Mass...'
-tar -xf $SCRATCH/LeBenchmark/Mass/output_waves.tar
-echo 'done unpacking Mass!'
+# ###### test
+# SCRATCH_DIR="$SCRATCH/LeBenchmark"
+# OUTPUT_DIR="$SCRATCH_DIR/all_outputs"
+# DIR=/lustre/fsmisc/dataset/MultilingualLibriSpeech/mls_french.tar.gz
+# PARENT_DIR=$(basename $(dirname "$DIR")) 
+# # make directory using name
+# mkdir -p "$OUTPUT_DIR/$PARENT_DIR"
+# # location of dir where files will be unpacked
+# OUTPUT_PATH="$OUTPUT_DIR/$PARENT_DIR"
+# # name of new .tar file
+# FILE_PATH="$OUTPUT_PATH/$(basename "$DIR")"
 
-### MaSS ###
-echo 'moving NCCFr'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v2/SpeechData/raw_datasets/NCCFr $SCRATCH/LeBenchmark
-echo 'unpacking NCCFr...'
-tar -xf $SCRATCH/LeBenchmark/NCCFr/output_waves.tar
-echo 'done unpacking NCCFr!'
+# echo "Processing $DIR..."
 
-### voxpopuli_unlabelled ###
-echo 'moving Voxpopuli_unlabeled_fr'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/Voxpopuli_unlabeled_fr $SCRATCH/LeBenchmark
-echo 'unpacking Voxpopuli_unlabeled_fr...'
-tar -xf $SCRATCH/LeBenchmark/Voxpopuli_unlabeled_fr/wav.tar
-echo 'done unpacking Voxpopuli_unlabeled_fr!'
+# if [ -e "$FILE_PATH" ]; then
+#     echo "$DIR already moved to $FILE_PATH. Skipping move."
+# else
+#     echo "Copying $DIR to $FILE_PATH ..."
+#     # scp -r -3 "$DIR" "$FILE_PATH"
+# fi
 
-### voxpopuli_transcribed_data ###
-echo 'moving Voxpopuli_transcribed'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/otherTransc/Voxpopuli_transcribed $SCRATCH/LeBenchmark
-echo 'unpacking Voxpopuli_transcribed...'
-tar -xf $SCRATCH/LeBenchmark/Voxpopuli_transcribed/wav.tar
-echo 'done unpacking Voxpopuli_transcribed!'
-
-
-########## extra-large - 14k ##########
-
-echo 'moving Niger-mali-audio-collection'
-scp -r -3 /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/Niger-mali-audio-collection $SCRATCH/LeBenchmark
-echo 'unpacking Niger-mali-audio-collection...'
-tar -xf $SCRATCH/LeBenchmark/Niger-mali-audio-collection/output_wav.tar
-echo 'done unpacking Niger-mali-audio-collection!'
-
-echo 'moving audiocite_with_metadata'
-rsync -av --include='*/' --include='*.tar' --exclude='*' /lustre/fsstor/projects/rech/oou/commun/pretraining_data/Panta_v1/SpeechData/unTransc/audiocite_with_metadata $SCRATCH/LeBenchmark/
-echo 'unpacking  audiocite_with_metadata...'
-tar -xf $SCRATCH/LeBenchmark/audiocite_with_metadata/wavs.tar
-echo 'done unpacking audiocite_with_metadata!'
-
-echo "Done!"
+# # Check file ending
+# if [[ "$FILE_PATH" == *.tar.gz ]]; then
+#     # Check if the extracted directory already exists
+#     if [ -d "$OUTPUT_PATH/$(basename "$FILE_PATH" .tar.gz)" ]; then
+#         echo "$OUTPUT_PATH already unpacked. Skipping extraction."
+#     else
+#         echo "Unpacking $PARENT_DIR..."
+#         # tar -xf "$FILE_PATH" -C "$OUTPUT_PATH"
+#     fi
+# elif [[ "$FILE_PATH" == *.tar ]]; then
+#     # Check if the extracted directory already exists
+#     if [ -d "$OUTPUT_PATH/$(basename "$FILE_PATH" .tar)" ]; then
+#         echo "$OUTPUT_PATH already unpacked. Skipping extraction."
+#     else
+#         echo "Unpacking $PARENT_DIR..."
+#         # tar -xf "$FILE_PATH" -C "$OUTPUT_PATH"
+#     fi
+# fi
+     
+# echo "Done processing $PARENT_DIR."
