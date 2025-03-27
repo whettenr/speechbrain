@@ -5,6 +5,7 @@ Authors
 * Jianyuan Zhong 2020
 * Samuele Cornell 2021
 * Sylvain de Langen 2023
+* Shucong Zhang 2024
 """
 
 import warnings
@@ -21,6 +22,7 @@ from speechbrain.nnet.attention import (
     MultiheadAttention,
     PositionalwiseFeedForward,
     RelPosMHAXL,
+    RoPEMHA,
 )
 from speechbrain.nnet.hypermixing import HyperMixing
 from speechbrain.nnet.normalization import LayerNorm
@@ -406,6 +408,12 @@ class ConformerEncoderLayer(nn.Module):
                 tied=False,
                 num_heads=nhead,
                 fix_tm_hidden_size=False,
+            )
+        elif attention_type == "RoPEMHA":
+            self.mha_layer = RoPEMHA(
+                num_heads=nhead,
+                embed_dim=d_model,
+                dropout=dropout,
             )
 
         self.convolution_module = ConvolutionModule(
@@ -813,7 +821,7 @@ class ConformerEncoder(nn.Module):
         if self.attention_type == "RelPosMHAXL":
             if pos_embs is None:
                 raise ValueError(
-                    "The chosen attention type for the Conformer is RelPosMHAXL. For this attention type, the positional embeddings are mandatory"
+                    f"The chosen attention type for the Conformer is {self.attention_type}. For this attention type, the positional embeddings are mandatory"
                 )
 
         output = src
@@ -884,10 +892,13 @@ class ConformerEncoder(nn.Module):
             The attention values.
         """
 
-        if self.attention_type == "RelPosMHAXL":
+        if (
+            self.attention_type == "RelPosMHAXL"
+            or self.attention_type == "RoPEMHA"
+        ):
             if pos_embs is None:
                 raise ValueError(
-                    "The chosen attention type for the Conformer is RelPosMHAXL. For this attention type, the positional embeddings are mandatory"
+                    f"The chosen attention type for the Conformer is {self.attention_type}. For this attention type, the positional embeddings are mandatory"
                 )
 
         output = src
