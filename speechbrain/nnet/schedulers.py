@@ -796,7 +796,7 @@ class CyclicCosineScheduler:
     ---------
     n_warmup_steps : int
         Number of warm up steps.
-    lr_initial : float
+    lrs_initial : list of floats or float
         Initial learning rate (i.e. the lr used at epoch 0).
     total_steps : int
         Total number of updating steps.
@@ -820,12 +820,17 @@ class CyclicCosineScheduler:
     1.0
     """
 
-    def __init__(self, n_warmup_steps, lr_initial=None, total_steps=100000):
+    def __init__(self, n_warmup_steps, lrs_initial=[], total_steps=100000):
         self.n_warmup_steps = n_warmup_steps
-        self.losses = []
-        self.initial_lr = lr_initial
-        self.current_lr = lr_initial
+        if isinstance(lrs_initial, list):
+            self.initial_lrs = lrs_initial
+        elif isinstance(lrs_initial, (float)):
+            self.initial_lrs = [lrs_initial]
+        else:
+            raise ValueError("lrs_initial must be a list of floats, or float")
+        self.current_lrs = self.initial_lrs
         self.total = total_steps
+        self.losses = []
 
         self.n_steps = 0
         self.normalize = 1 / (n_warmup_steps * n_warmup_steps**-1.5)
@@ -839,33 +844,45 @@ class CyclicCosineScheduler:
 
         Returns
         -------
-        current_lr : float
+        prev_lrs : list
             The learning rate before the update.
-        lr : float
+        updated_lrs : float
             The learning rate after the update.
         """
         self.n_steps += 1
+        prev_lrs = []
+        updated_lrs = []
 
-        if self.initial_lr is None:
-            current_lr = opt.param_groups[0]["lr"]
-        else:
-            current_lr = self.current_lr
+        # if no initial lr are given
+        # initialize by itterating throught param_groups lrs
+        if not self.initial_lrs:
+            for param_group in opt.param_groups:
+                self.initial_lrs.append(param_group["lr"])
 
-        lr = current_lr * self._get_lr_scale()
-
-        # Changing the learning rate within the optimizer
+        # store current lrs not really necessary except for
+        # updating current_lrs and returning values
         for param_group in opt.param_groups:
-            param_group["lr"] = lr
+            prev_lrs.append(param_group["lr"]) 
 
-        self.current_lr = current_lr
-        return current_lr, lr
+        # calculate and update new lrs
+        for idx, i_lr in enumerate(self.initial_lrs):
+            # calculate new lr
+            lr = i_lr * self._get_lr_scale()
+            # store values -> for returning
+            updated_lrs.append(lr)
+            param_group["lr"] = updated_lrs[idx]
+
+    
+        self.current_lrs = prev_lrs
+        return prev_lrs, updated_lrs
+
 
     def _get_lr_scale(self):
         n_steps, n_warmup_steps = self.n_steps, self.n_warmup_steps
         return 0.5 * (
             math.cos(math.pi * (n_steps - n_warmup_steps) / self.total) + 1
         )
-
+    
     @checkpoints.mark_as_saver
     def save(self, path):
         """Saves the current metrics on the specified path."""

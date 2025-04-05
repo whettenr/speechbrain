@@ -670,7 +670,7 @@ class ConformerEncoder(nn.Module):
         attention_type="RelPosMHAXL",
         output_hidden_states=False,
         layerdrop_prob=0.0,
-        layers_to_use=[]
+        layers_to_use=[],
     ):
         super().__init__()
 
@@ -710,6 +710,7 @@ class ConformerEncoder(nn.Module):
         self.num_layers = num_layers
         self.layers_to_use = list(range(num_layers))
         print(f'LAYERS SET TO {self.layers_to_use}')
+        
 
     def reinitialize_layers(self, layer_indices):
         """
@@ -781,6 +782,18 @@ class ConformerEncoder(nn.Module):
                     # Add Gaussian noise if specified
                     target_param.add_(torch.randn_like(target_param) * noise_std)
 
+    # def freeze_layers(self, layers_to_freeze):
+    #     for i, layer in enumerate(self.layers):
+    #         if i in layers_to_freeze:
+    #             for param in layer.parameters():
+    #                 param.requires_grad = False
+    #         else:
+    #             for param in layer.parameters():
+    #                 param.requires_grad = True
+    #     # check which params of the conformer are frozen
+    #     for i, layer in enumerate(self.layers):
+    #         for param in layer.parameters():
+    #             print(f"Layer {i} requires_grad: {param.requires_grad}")
 
     def forward(
         self,
