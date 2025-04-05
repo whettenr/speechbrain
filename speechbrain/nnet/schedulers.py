@@ -858,6 +858,7 @@ class CyclicCosineScheduler:
         if not self.initial_lrs:
             for param_group in opt.param_groups:
                 self.initial_lrs.append(param_group["lr"])
+            print(f"set initial to -> {self.initial_lrs}")
 
         # store current lrs not really necessary except for
         # updating current_lrs and returning values
@@ -870,7 +871,8 @@ class CyclicCosineScheduler:
             lr = i_lr * self._get_lr_scale()
             # store values -> for returning
             updated_lrs.append(lr)
-            param_group["lr"] = updated_lrs[idx]
+            # update optimizer
+            opt.param_groups[idx]["lr"] = updated_lrs[idx]
 
     
         self.current_lrs = prev_lrs
