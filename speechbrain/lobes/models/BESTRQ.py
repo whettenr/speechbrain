@@ -127,3 +127,59 @@ def brq_mask_collate_fn(
         torch.as_tensor(wav_lens),
         torch.as_tensor(mask),
     )
+
+def brq_mask_collate_ids_fn(
+    samples_lst, get_out_len_fn, mask_prob, mask_length, n_mels
+):
+    wav_lst, latent_length_lst = [], []
+    ids = []
+    for sample in samples_lst:
+        ids.append(sample["id"])
+        sig = sample["sig"]
+        wav_lst.append(sig)
+        latent_length = get_out_len_fn(torch.as_tensor(sig.size(-1)))
+        latent_length_lst.append(latent_length.item())
+    bs = len(wav_lst)
+    wavs_padded, wav_lens = batch_pad_right(wav_lst)
+
+    batch_time_len = max(latent_length_lst)
+    batch_time_len
+    mask = compute_mask(
+        (bs, batch_time_len, n_mels), latent_length_lst, mask_prob, mask_length
+    )
+    return (
+        ids,
+        torch.as_tensor(wavs_padded),
+        torch.as_tensor(wav_lens),
+        torch.as_tensor(mask),
+    )
+
+
+def brq_mask_collate_tgts_fn(
+    samples_lst, get_out_len_fn, mask_prob, mask_length, n_mels
+):
+    wav_lst, latent_length_lst = [], []
+    ids = []
+    targets_list = []
+    for sample in samples_lst:
+        ids.append(sample["id"])
+        sig = sample["sig"]
+        targets_list.append(sample["targets"])
+        wav_lst.append(sig)
+        latent_length = get_out_len_fn(torch.as_tensor(sig.size(-1)))
+        latent_length_lst.append(latent_length.item())
+    bs = len(wav_lst)
+    wavs_padded, wav_lens = batch_pad_right(wav_lst)
+    tgts_padded, tgts_lens = batch_pad_right(targets_list)
+
+    batch_time_len = max(latent_length_lst)
+    batch_time_len
+    mask = compute_mask(
+        (bs, batch_time_len, n_mels), latent_length_lst, mask_prob, mask_length
+    )
+    return (
+        torch.as_tensor(wavs_padded),
+        torch.as_tensor(wav_lens),
+        torch.as_tensor(mask),
+        torch.as_tensor(tgts_padded),
+    )
