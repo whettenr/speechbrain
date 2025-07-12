@@ -29,6 +29,14 @@ logger = get_logger(__name__)
 class ASR(sb.Brain):
     def compute_forward(self, batch, stage):
         """Forward computations from the waveform batches to the output probabilities."""
+
+        if self.hparams.streaming:
+            dynchunktrain_config = self.hparams.dynchunktrain_config_sampler(
+                stage
+            )
+        else:
+            dynchunktrain_config = None
+
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
         wavs, wav_lens = wavs.to(self.device), wav_lens.to(self.device)
@@ -44,7 +52,10 @@ class ASR(sb.Brain):
         feats = self.modules.normalize(feats, wav_lens)
 
         feats = self.modules.CNN(feats)
-        enc_out = self.modules.enc(feats, wav_lens)
+
+        enc_out = self.modules.enc(
+            feats, wav_lens, dynchunktrain_config=dynchunktrain_config
+        )
 
         x = self.modules.back_end_ffn(enc_out)
 
